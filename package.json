@@ -1,0 +1,13 @@
+{
+  "name": "auto-license-server",
+  "version": "1.0.0",
+  "description": "Automatic device-based license and activation server for Vercel and Node.js",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
