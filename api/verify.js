@@ -11,7 +11,7 @@
         // 1. License Keys Database
         // Format: 'KEY' => Expiration timestamp in milliseconds (1798761599000 = Dec 31, 2026)
         const keysDatabase = {
-            "KEY-123456": 1798761599000,
+            "KEY-1234567": 1798761599000,
             "VIP-PRO-2026": 1798761599000,
             "TEST-PIN-7890": 1780000000000
         };
