@@ -1,61 +1,51 @@
-    export default function handler(req, res) {
-        // Set response headers
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Cache-Control', 'no-store, max-age=0');
+// ==============================================================================
+// Vercel Serverless Function: GET /api/verify
+// Queried automatically by the Android app in onResume()
+// ==============================================================================
 
-        // Read query parameters (?key=...&device_id=...&pkg=...)
-        const { key, device_id, pkg } = req.query;
+// Global in-memory cache for active lambda instances
+global.activatedDevices = global.activatedDevices || {};
 
-        const renewalUrl = "https://yourdomain.com/getkey";
+export default function handler(req, res) {
+    // Set headers to prevent caching
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader('Access-Control-Allow-Origin', '*');
 
-        // 1. License Keys Database
-        // Format: 'KEY' => Expiration timestamp in milliseconds (1798761599000 = Dec 31, 2026)
-        const keysDatabase = {
-            "KEY-1234567": 1798761599000,
-            "VIP-PRO-2026": 1798761599000,
-            "TEST-PIN-7890": 1780000000000
-        };
+    const { device_id, pkg } = req.query;
 
-        // 2. Check if key is provided
-        if (!key || key.trim() === '') {
-            return res.status(200).json({
-                isValid: false,
-                expiresAt: 0,
-                message: "Please enter your license key to activate.",
-                renewalUrl: renewalUrl
-            });
-        }
-
-        const cleanKey = key.trim();
-
-        // 3. Check if key exists
-        if (!keysDatabase.hasOwnProperty(cleanKey)) {
-            return res.status(200).json({
-                isValid: false,
-                expiresAt: 0,
-                message: "Invalid license key or PIN.",
-                renewalUrl: renewalUrl
-            });
-        }
-
-        const expiresAt = keysDatabase[cleanKey];
-        const now = Date.now();
-
-        // 4. Check expiration
-        if (expiresAt <= now) {
-            return res.status(200).json({
-                isValid: false,
-                expiresAt: expiresAt,
-                message: "This license key has expired.",
-                renewalUrl: renewalUrl
-            });
-        }
-
-        // 5. Success
+    if (!device_id || device_id.trim() === '') {
         return res.status(200).json({
-            isValid: true,
-            expiresAt: expiresAt,
-            message: "License verified successfully.",
+            isValid: false,
+            expiresAt: 0,
+            message: "Missing device identifier.",
             renewalUrl: null
         });
     }
+
+    const cleanDeviceId = device_id.trim();
+    const now = Date.now();
+    const expiry = global.activatedDevices[cleanDeviceId];
+
+    // 1. Device is already activated and unexpired
+    if (expiry && expiry > now) {
+        return res.status(200).json({
+            isValid: true,
+            expiresAt: expiry,
+            message: "Device active and verified.",
+            renewalUrl: null
+        });
+    }
+
+    // 2. Device is not active or has expired today
+    const host = req.headers['host'];
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const activationLink = `${protocol}://${host}/api/activate?device_id=${encodeURIComponent(cleanDeviceId)}`;
+
+    return res.status(200).json({
+        isValid: false,
+        expiresAt: 0,
+        message: "Device requires daily activation. Please complete link visit.",
+        renewalUrl: activationLink
+    });
+}
