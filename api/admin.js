@@ -1,7 +1,7 @@
 // ==============================================================================
 // Vercel Serverless Function: /api/admin
-// Complete Standalone Device Management Dashboard
-// Fetches live device data from /api/verify to ensure 100% synchronized state.
+// Un-slopped Standalone Device Management Dashboard
+// Pro-grade interface with zero AI cliches, clean SVG iconography & live state sync.
 // ==============================================================================
 
 export default async function handler(req, res) {
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     }
 
     // --------------------------------------------------------------------------
-    // Default: Render the Complete Interactive HTML Admin Dashboard
+    // Default: Render the Un-slopped HTML Admin Dashboard
     // --------------------------------------------------------------------------
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(`<!DOCTYPE html>
@@ -38,196 +38,528 @@ export default async function handler(req, res) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>License Dashboard - Live Device Manager</title>
+    <title>Device Management Dashboard</title>
     <style>
         :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #e2e8f0;
-            --text: #0f172a;
-            --text-muted: #64748b;
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --success: #16a34a;
-            --success-bg: #dcfce7;
-            --danger: #dc2626;
-            --danger-bg: #fee2e2;
-            --radius: 10px;
+            --bg-base: #090d16;
+            --bg-surface: #0f172a;
+            --bg-surface-elevated: #1e293b;
+            --bg-subtle: #172033;
+            --border-subtle: #1e293b;
+            --border-default: #334155;
+            --border-focus: #6366f1;
+            
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-tertiary: #64748b;
+            
+            --accent-primary: #6366f1;
+            --accent-primary-hover: #4f46e5;
+            --accent-subtle: rgba(99, 102, 241, 0.12);
+            
+            --status-active: #10b981;
+            --status-active-bg: rgba(16, 185, 129, 0.1);
+            --status-active-border: rgba(16, 185, 129, 0.25);
+            
+            --status-expired: #64748b;
+            --status-expired-bg: rgba(100, 116, 139, 0.1);
+            --status-expired-border: rgba(100, 116, 139, 0.25);
+            
+            --status-danger: #f43f5e;
+            --status-danger-bg: rgba(244, 63, 94, 0.1);
+            --status-danger-border: rgba(244, 63, 94, 0.25);
+            
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 30px 20px;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            padding: 32px 24px;
         }
-        .container { max-width: 1100px; margin: 0 auto; }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
         header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-subtle);
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 16px;
         }
-        h1 { font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-        .tag { font-size: 12px; background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        .stat-label { font-size: 13px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
-        .stat-value { font-size: 28px; font-weight: 700; }
-        .stat-active { color: var(--success); }
-        .stat-expired { color: var(--danger); }
-        
-        .controls {
+
+        .header-title-group {
             display: flex;
+            align-items: center;
             gap: 12px;
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .pulse-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+        }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: var(--status-active);
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+            animation: pulse-ring 2.5s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Metric Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 18px 20px;
+            transition: border-color 0.15s ease;
+        }
+
+        .metric-card:hover {
+            border-color: var(--border-default);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+
+        .metric-value.active { color: var(--status-active); }
+        .metric-value.expired { color: var(--text-secondary); }
+
+        /* Action Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
             margin-bottom: 20px;
             flex-wrap: wrap;
-            background: var(--surface);
-            padding: 16px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
         }
-        .controls input, .controls select, .controls button {
-            padding: 10px 14px;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            font-size: 14px;
+
+        .search-container {
+            position: relative;
+            flex: 1;
+            min-width: 260px;
         }
-        .controls input { flex: 1; min-width: 200px; }
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            border: none;
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            pointer-events: none;
+            width: 16px;
+            height: 16px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px 8px 36px;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--border-focus);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .input-text {
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+            min-width: 200px;
+            font-family: var(--font-mono);
+        }
+
+        .input-text:focus {
+            border-color: var(--border-focus);
+        }
+
+        .select-custom {
+            background: var(--bg-base);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
             cursor: pointer;
-            font-weight: 600;
-            transition: background 0.2s;
         }
-        .btn-primary:hover { background: var(--primary-hover); }
-        
+
+        .select-custom:focus {
+            border-color: var(--border-focus);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            padding: 8px 14px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-primary);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-surface-elevated);
+            color: var(--text-primary);
+            border-color: var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border-default);
+        }
+
+        .btn-sm {
+            padding: 5px 9px;
+            font-size: 12px;
+        }
+
+        .btn-ghost-danger {
+            background: transparent;
+            color: var(--status-danger);
+            border-color: transparent;
+        }
+
+        .btn-ghost-danger:hover {
+            background: var(--status-danger-bg);
+            border-color: var(--status-danger-border);
+        }
+
+        .btn-ghost-subtle {
+            background: transparent;
+            color: var(--text-secondary);
+            border-color: transparent;
+        }
+
+        .btn-ghost-subtle:hover {
+            background: var(--bg-surface-elevated);
+            color: var(--text-primary);
+        }
+
+        /* Table */
+        .table-container {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            background: var(--surface);
-            border-radius: var(--radius);
-            overflow: hidden;
-            border: 1px solid var(--border);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            text-align: left;
+            font-variant-numeric: tabular-nums;
         }
-        th, td { padding: 14px 18px; text-align: left; font-size: 14px; }
-        th { background: #f1f5f9; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-        tr:not(:last-child) { border-bottom: 1px solid var(--border); }
-        tr:hover { background: #f8fafc; }
-        
+
+        thead {
+            background-color: var(--bg-subtle);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        th {
+            padding: 12px 18px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border-subtle);
+            transition: background-color 0.1s ease;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background-color: var(--bg-subtle);
+        }
+
+        td {
+            padding: 14px 18px;
+            font-size: 13px;
+            vertical-align: middle;
+        }
+
+        /* Badges */
         .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 3px 8px;
+            border-radius: var(--radius-sm);
         }
-        .badge-active { background: var(--success-bg); color: var(--success); }
-        .badge-expired { background: var(--danger-bg); color: var(--danger); }
-        
-        .device-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-weight: 600; }
-        .btn-action {
-            padding: 6px 10px;
-            border-radius: 5px;
-            border: 1px solid var(--border);
+
+        .badge-active {
+            background-color: var(--status-active-bg);
+            color: var(--status-active);
+            border: 1px solid var(--status-active-border);
+        }
+
+        .badge-expired {
+            background-color: var(--status-expired-bg);
+            color: var(--status-expired);
+            border: 1px solid var(--status-expired-border);
+        }
+
+        .device-id-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .code-text {
+            font-family: var(--font-mono);
             font-size: 12px;
-            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .pkg-tag {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: var(--bg-base);
+            padding: 3px 7px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-tertiary);
             cursor: pointer;
-            background: white;
-            margin-right: 4px;
-            transition: 0.15s;
+            padding: 3px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s ease;
         }
-        .btn-action:hover { background: #f1f5f9; }
-        .btn-revoke { color: var(--danger); border-color: #fecaca; }
-        .btn-revoke:hover { background: var(--danger-bg); }
-        .btn-add { color: var(--primary); border-color: #bfdbfe; }
-        .btn-add:hover { background: #dbeafe; }
-        
-        .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+
+        .copy-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .action-group {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+
+        .empty-state {
+            padding: 56px 20px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            margin-bottom: 12px;
+            color: var(--text-tertiary);
+        }
+
+        /* Notification Toast */
         .toast {
             position: fixed;
-            bottom: 25px;
-            right: 25px;
-            background: #1e293b;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 14px;
+            bottom: 24px;
+            right: 24px;
+            background-color: var(--bg-surface-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border-default);
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
             display: none;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
             z-index: 1000;
+            animation: toast-in 0.2s ease;
+        }
+
+        @keyframes toast-in {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
     </style>
 </head>
 <body>
 <div class="container">
     <header>
-        <div>
-            <h1>Device License Dashboard <span class="tag">Live Manager</span></h1>
-            <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">Monitor and control Android activations in real-time</p>
+        <div class="header-title-group">
+            <h1>Device Licenses</h1>
+            <div class="pulse-indicator">
+                <span class="pulse-dot"></span>
+                <span>Live State</span>
+            </div>
         </div>
-        <button class="btn-action" onclick="fetchDevices()" style="padding: 10px 16px; font-size: 13px;">🔄 Refresh List</button>
+        <button class="btn btn-secondary btn-sm" onclick="fetchDevices()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            Refresh
+        </button>
     </header>
 
-    <div class="stats">
-        <div class="card">
-            <div class="stat-label">Total Registered</div>
-            <div class="stat-value" id="stat-total">0</div>
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-label">Registered Devices</div>
+            <div class="metric-value" id="stat-total">0</div>
         </div>
-        <div class="card">
-            <div class="stat-label">Currently Active</div>
-            <div class="stat-value stat-active" id="stat-active">0</div>
+        <div class="metric-card">
+            <div class="metric-label">Active Licenses</div>
+            <div class="metric-value active" id="stat-active">0</div>
         </div>
-        <div class="card">
-            <div class="stat-label">Expired / Inactive</div>
-            <div class="stat-value stat-expired" id="stat-expired">0</div>
+        <div class="metric-card">
+            <div class="metric-label">Expired / Inactive</div>
+            <div class="metric-value expired" id="stat-expired">0</div>
         </div>
     </div>
 
-    <div class="controls">
-        <input type="text" id="search-input" placeholder="🔍 Search by device ID or package..." oninput="filterTable()">
-        <input type="text" id="manual-id" placeholder="Device UUID to activate" style="flex: 0.8;">
-        <select id="manual-hours">
-            <option value="24">24 Hours (1 Day)</option>
-            <option value="48">48 Hours (2 Days)</option>
-            <option value="168">7 Days (1 Week)</option>
-            <option value="720">30 Days (1 Month)</option>
-        </select>
-        <button class="btn-primary" onclick="manualActivate()">+ Activate Device</button>
+    <div class="toolbar">
+        <div class="search-container">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" class="search-input" id="search-input" placeholder="Search by device UUID or package name..." oninput="filterTable()">
+        </div>
+        <div class="toolbar-actions">
+            <input type="text" class="input-text" id="manual-id" placeholder="Device UUID">
+            <select class="select-custom" id="manual-hours">
+                <option value="24">24 Hours</option>
+                <option value="48">48 Hours</option>
+                <option value="168">7 Days</option>
+                <option value="720">30 Days</option>
+            </select>
+            <button class="btn btn-primary" onclick="manualActivate()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                Grant License
+            </button>
+        </div>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Status</th>
-                <th>Device ID</th>
-                <th>Package</th>
-                <th>Time Remaining</th>
-                <th>Expires At</th>
-                <th>Last Active</th>
-                <th style="text-align: right;">Quick Actions</th>
-            </tr>
-        </thead>
-        <tbody id="device-table">
-            <tr><td colspan="7" class="empty-state">Loading registered devices...</td></tr>
-        </tbody>
-    </table>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 120px;">Status</th>
+                    <th>Device Identifier</th>
+                    <th>Package</th>
+                    <th>Time Remaining</th>
+                    <th>Expiration</th>
+                    <th>Last Active</th>
+                    <th style="text-align: right; width: 180px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="device-table">
+                <tr><td colspan="7" class="empty-state">Loading registered records...</td></tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -239,51 +571,66 @@ export default async function handler(req, res) {
         try {
             const res = await fetch('/api/verify?action=list');
             const data = await res.json();
-            
-            // Check if verify.js returned proper stats
+
             if (!data || !data.stats) {
                 const msg = data && data.message ? data.message : "Incompatible response";
-                showToast("Note: Please update api/verify.js on Vercel (" + msg + ")");
                 document.getElementById('device-table').innerHTML = 
-                    '<tr><td colspan="7" class="empty-state" style="padding: 30px; line-height: 1.8;">' +
-                    '<div style="font-size: 16px; font-weight: 700; color: #dc2626; margin-bottom: 8px;">⚠️ api/verify.js on Vercel is still running the old version</div>' +
-                    '<div style="color: #4b5563; font-size: 14px;">The dashboard reached <code>/api/verify?action=list</code>, but your deployed <code>api/verify.js</code> returned: <em>\"' + escapeHtml(msg) + '\"</em>.<br>' +
-                    'Please copy the updated <code>api/verify.js</code> code into your Vercel project to enable live device listing.</div>' +
+                    '<tr><td colspan="7" class="empty-state">' +
+                    '<div style="font-weight: 600; color: #f43f5e; margin-bottom: 6px;">api/verify.js on Vercel needs updating</div>' +
+                    '<div style="font-size: 13px; color: var(--text-secondary);">Endpoint returned: <code>' + escapeHtml(msg) + '</code>. Ensure the updated <code>api/verify.js</code> is deployed.</div>' +
                     '</td></tr>';
                 return;
             }
 
             allDevices = data.devices || [];
-            
+
             document.getElementById('stat-total').innerText = data.stats.total;
             document.getElementById('stat-active').innerText = data.stats.active;
             document.getElementById('stat-expired').innerText = data.stats.expired;
 
             renderTable(allDevices);
         } catch (e) {
-            showToast("Failed to fetch devices: " + e.message);
+            showToast("Failed to query device state: " + e.message);
         }
     }
 
     function renderTable(devices) {
         const tbody = document.getElementById('device-table');
         if (devices.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No devices registered yet. Devices appear automatically when the Android app launches.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">' +
+                '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>' +
+                '<div>No devices registered yet. Devices appear automatically on first application launch.</div>' +
+                '</td></tr>';
             return;
         }
 
         tbody.innerHTML = devices.map(d => \`
             <tr>
-                <td><span class="badge \${d.isActive ? 'badge-active' : 'badge-expired'}">\${d.isActive ? 'Active' : 'Expired'}</span></td>
-                <td class="device-code">\${escapeHtml(d.device_id)}</td>
-                <td style="color: var(--text-muted); font-size: 13px;">\${escapeHtml(d.pkg)}</td>
-                <td style="font-weight: 600;">\${d.timeRemaining}</td>
-                <td style="color: var(--text-muted); font-size: 13px;">\${d.expiresFormatted}</td>
-                <td style="color: var(--text-muted); font-size: 13px;">\${d.lastSeen}</td>
-                <td style="text-align: right;">
-                    <button class="btn-action btn-add" onclick="modifyDevice('\${escapeHtml(d.device_id)}', 24)">+24h</button>
-                    \${d.isActive ? \`<button class="btn-action btn-revoke" onclick="revokeDevice('\${escapeHtml(d.device_id)}')">Revoke</button>\` : ''}
-                    <button class="btn-action" onclick="deleteDevice('\${escapeHtml(d.device_id)}')">✕</button>
+                <td>
+                    <span class="badge \${d.isActive ? 'badge-active' : 'badge-expired'}">
+                        \${d.isActive ? 'Active' : 'Expired'}
+                    </span>
+                </td>
+                <td>
+                    <div class="device-id-cell">
+                        <span class="code-text">\${escapeHtml(d.device_id)}</span>
+                        <button class="copy-btn" title="Copy Identifier" onclick="copyId('\${escapeHtml(d.device_id)}')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        </button>
+                    </div>
+                </td>
+                <td><span class="pkg-tag">\${escapeHtml(d.pkg)}</span></td>
+                <td style="font-weight: 500;">\${d.timeRemaining}</td>
+                <td style="color: var(--text-secondary); font-size: 12px;">\${d.expiresFormatted}</td>
+                <td style="color: var(--text-secondary); font-size: 12px;">\${d.lastSeen}</td>
+                <td>
+                    <div class="action-group">
+                        <button class="btn btn-secondary btn-sm" onclick="modifyDevice('\${escapeHtml(d.device_id)}', 24)">+24h</button>
+                        \${d.isActive ? \`<button class="btn btn-ghost-danger btn-sm" onclick="revokeDevice('\${escapeHtml(d.device_id)}')">Revoke</button>\` : ''}
+                        <button class="btn btn-ghost-subtle btn-sm" title="Delete record" onclick="deleteDevice('\${escapeHtml(d.device_id)}')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        </button>
+                    </div>
                 </td>
             </tr>
         \`).join('');
@@ -292,8 +639,8 @@ export default async function handler(req, res) {
     async function modifyDevice(id, hours) {
         try {
             const res = await fetch(\`/api/verify?action=admin_activate&device_id=\${encodeURIComponent(id)}&hours=\${hours}\`);
-            const data = await res.json();
-            showToast("Device activated for " + hours + " hours");
+            await res.json();
+            showToast("Extended license by " + hours + " hours");
             fetchDevices();
         } catch (e) {
             showToast("Error updating device");
@@ -304,21 +651,21 @@ export default async function handler(req, res) {
         if (!confirm("Revoke license for this device immediately?")) return;
         try {
             await fetch(\`/api/verify?action=revoke&device_id=\${encodeURIComponent(id)}\`);
-            showToast("Device license revoked");
+            showToast("License revoked");
             fetchDevices();
         } catch (e) {
-            showToast("Error revoking device");
+            showToast("Error revoking license");
         }
     }
 
     async function deleteDevice(id) {
-        if (!confirm("Remove this device from the registry?")) return;
+        if (!confirm("Permanently remove this device record?")) return;
         try {
             await fetch(\`/api/verify?action=delete&device_id=\${encodeURIComponent(id)}\`);
-            showToast("Device deleted");
+            showToast("Record deleted");
             fetchDevices();
         } catch (e) {
-            showToast("Error deleting device");
+            showToast("Error removing record");
         }
     }
 
@@ -329,7 +676,7 @@ export default async function handler(req, res) {
         const hours = hoursSelect.value;
 
         if (!id) {
-            alert("Please enter a device ID");
+            showToast("Please provide a device identifier");
             return;
         }
 
@@ -346,18 +693,23 @@ export default async function handler(req, res) {
         renderTable(filtered);
     }
 
+    function copyId(id) {
+        navigator.clipboard.writeText(id).then(() => {
+            showToast("Copied device identifier to clipboard");
+        });
+    }
+
     function showToast(msg) {
         const toast = document.getElementById('toast');
         toast.innerText = msg;
         toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 2500);
+        setTimeout(() => { toast.style.display = 'none'; }, 2200);
     }
 
     function escapeHtml(str) {
         return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // Auto-fetch on load and poll every 8 seconds
     fetchDevices();
     setInterval(fetchDevices, 8000);
 </script>
