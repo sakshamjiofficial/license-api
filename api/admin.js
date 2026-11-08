@@ -1,141 +1,36 @@
 // ==============================================================================
 // Vercel Serverless Function: /api/admin
-// Complete Device Management Dashboard & REST Controller
+// Complete Standalone Device Management Dashboard
+// Fetches live device data from /api/verify to ensure 100% synchronized state.
 // ==============================================================================
 
-global.activatedDevices = global.activatedDevices || {};
-
-function formatTimeRemaining(ms) {
-    if (ms <= 0) return "Expired";
-    const totalMinutes = Math.floor(ms / (1000 * 60));
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    const days = Math.floor(hours / 24);
-    if (days > 0) return `${days}d ${hours % 24}h`;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-}
-
-function formatRelativeTime(timestamp) {
-    if (!timestamp) return "Never";
-    const diff = Date.now() - timestamp;
-    const minutes = Math.floor(diff / (1000 * 60));
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return new Date(timestamp).toLocaleDateString();
-}
-
-export default function handler(req, res) {
+export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    const { action, device_id, hours } = req.query;
-    const now = Date.now();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+
+    const { action } = req.query;
+    const host = req.headers['host'] || 'license-api-theta.vercel.app';
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
 
     // --------------------------------------------------------------------------
-    // API ACTION: LIST DEVICES
+    // If called via API (e.g. ?action=list, ?action=activate, etc.), proxy to /api/verify
     // --------------------------------------------------------------------------
-    if (action === 'list') {
-        res.setHeader('Content-Type', 'application/json');
-        const list = [];
-        let activeCount = 0;
-        let expiredCount = 0;
-
-        for (const [id, raw] of Object.entries(global.activatedDevices)) {
-            let record;
-            if (typeof raw === 'number') {
-                record = { expiresAt: raw, pkg: 'unknown', firstSeen: raw, lastSeen: raw };
-            } else {
-                record = raw;
-            }
-
-            const isActive = record.expiresAt && record.expiresAt > now;
-            if (isActive) activeCount++;
-            else expiredCount++;
-
-            list.push({
-                device_id: id,
-                pkg: record.pkg || 'unknown',
-                isActive: !!isActive,
-                expiresAt: record.expiresAt || 0,
-                expiresFormatted: record.expiresAt ? new Date(record.expiresAt).toLocaleString() : 'Never',
-                timeRemaining: isActive ? formatTimeRemaining(record.expiresAt - now) : 'Expired',
-                lastSeen: formatRelativeTime(record.lastSeen)
-            });
+    if (action) {
+        try {
+            const qs = new URLSearchParams(req.query).toString();
+            const verifyUrl = `${protocol}://${host}/api/verify?${qs}`;
+            const apiRes = await fetch(verifyUrl);
+            const data = await apiRes.json();
+            res.setHeader('Content-Type', 'application/json');
+            return res.status(apiRes.status).json(data);
+        } catch (err) {
+            res.setHeader('Content-Type', 'application/json');
+            return res.status(500).json({ error: "Failed to query verify endpoint: " + err.message });
         }
-
-        // Sort: Active devices first, then newest
-        list.sort((a, b) => b.expiresAt - a.expiresAt);
-
-        return res.status(200).json({
-            stats: {
-                total: list.length,
-                active: activeCount,
-                expired: expiredCount
-            },
-            devices: list
-        });
     }
 
     // --------------------------------------------------------------------------
-    // API ACTION: ACTIVATE DEVICE
-    // --------------------------------------------------------------------------
-    if (action === 'activate') {
-        res.setHeader('Content-Type', 'application/json');
-        if (!device_id) return res.status(400).json({ error: "Missing device_id" });
-
-        const cleanId = device_id.trim();
-        const durationHours = parseFloat(hours) || 24;
-        const expiresAt = now + (durationHours * 60 * 60 * 1000);
-
-        let record = global.activatedDevices[cleanId];
-        if (typeof record === 'object' && record !== null) {
-            record.expiresAt = expiresAt;
-            record.lastSeen = now;
-        } else {
-            global.activatedDevices[cleanId] = {
-                expiresAt: expiresAt,
-                pkg: 'manual',
-                firstSeen: now,
-                lastSeen: now
-            };
-        }
-
-        return res.status(200).json({ success: true, message: `Device activated for ${durationHours}h`, expiresAt });
-    }
-
-    // --------------------------------------------------------------------------
-    // API ACTION: REVOKE / DEACTIVATE DEVICE
-    // --------------------------------------------------------------------------
-    if (action === 'revoke') {
-        res.setHeader('Content-Type', 'application/json');
-        if (!device_id) return res.status(400).json({ error: "Missing device_id" });
-
-        const cleanId = device_id.trim();
-        if (global.activatedDevices[cleanId]) {
-            if (typeof global.activatedDevices[cleanId] === 'object') {
-                global.activatedDevices[cleanId].expiresAt = 0;
-            } else {
-                global.activatedDevices[cleanId] = 0;
-            }
-        }
-
-        return res.status(200).json({ success: true, message: "Device license revoked." });
-    }
-
-    // --------------------------------------------------------------------------
-    // API ACTION: DELETE DEVICE
-    // --------------------------------------------------------------------------
-    if (action === 'delete') {
-        res.setHeader('Content-Type', 'application/json');
-        if (!device_id) return res.status(400).json({ error: "Missing device_id" });
-
-        delete global.activatedDevices[device_id.trim()];
-        return res.status(200).json({ success: true, message: "Device removed." });
-    }
-
-    // --------------------------------------------------------------------------
-    // DEFAULT: RENDER HTML DASHBOARD
+    // Default: Render the Complete Interactive HTML Admin Dashboard
     // --------------------------------------------------------------------------
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(`<!DOCTYPE html>
@@ -143,7 +38,7 @@ export default function handler(req, res) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>License Dashboard - Device Manager</title>
+    <title>License Dashboard - Live Device Manager</title>
     <style>
         :root {
             --bg: #f8fafc;
@@ -300,35 +195,32 @@ export default function handler(req, res) {
             <div class="stat-value stat-active" id="stat-active">0</div>
         </div>
         <div class="card">
-            <div class="stat-label">Expired / Pending</div>
+            <div class="stat-label">Expired / Inactive</div>
             <div class="stat-value stat-expired" id="stat-expired">0</div>
         </div>
     </div>
 
     <div class="controls">
-        <input type="text" id="manual-id" placeholder="Enter Device ID to activate manually...">
+        <input type="text" id="search-input" placeholder="🔍 Search by device ID or package..." oninput="filterTable()">
+        <input type="text" id="manual-id" placeholder="Device UUID to activate" style="flex: 0.8;">
         <select id="manual-hours">
             <option value="24">24 Hours (1 Day)</option>
+            <option value="48">48 Hours (2 Days)</option>
             <option value="168">7 Days (1 Week)</option>
             <option value="720">30 Days (1 Month)</option>
-            <option value="87600">Lifetime (10 Years)</option>
         </select>
         <button class="btn-primary" onclick="manualActivate()">+ Activate Device</button>
-    </div>
-
-    <div style="margin-bottom: 15px;">
-        <input type="text" id="search-input" onkeyup="filterTable()" placeholder="🔍 Search device ID or package name..." style="width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; background: white;">
     </div>
 
     <table>
         <thead>
             <tr>
                 <th>Status</th>
-                <th>Device Identifier</th>
+                <th>Device ID</th>
                 <th>Package</th>
-                <th>Time Left</th>
-                <th>Expires Date</th>
-                <th>Last Seen</th>
+                <th>Time Remaining</th>
+                <th>Expires At</th>
+                <th>Last Active</th>
                 <th style="text-align: right;">Quick Actions</th>
             </tr>
         </thead>
@@ -343,9 +235,10 @@ export default function handler(req, res) {
 <script>
     let allDevices = [];
 
+    // Directly query /api/verify?action=list where live device state resides
     async function fetchDevices() {
         try {
-            const res = await fetch('/api/admin?action=list');
+            const res = await fetch('/api/verify?action=list');
             const data = await res.json();
             allDevices = data.devices || [];
             
@@ -385,7 +278,7 @@ export default function handler(req, res) {
 
     async function modifyDevice(id, hours) {
         try {
-            const res = await fetch(\`/api/admin?action=activate&device_id=\${encodeURIComponent(id)}&hours=\${hours}\`);
+            const res = await fetch(\`/api/verify?action=admin_activate&device_id=\${encodeURIComponent(id)}&hours=\${hours}\`);
             const data = await res.json();
             showToast("Device activated for " + hours + " hours");
             fetchDevices();
@@ -397,7 +290,7 @@ export default function handler(req, res) {
     async function revokeDevice(id) {
         if (!confirm("Revoke license for this device immediately?")) return;
         try {
-            await fetch(\`/api/admin?action=revoke&device_id=\${encodeURIComponent(id)}\`);
+            await fetch(\`/api/verify?action=revoke&device_id=\${encodeURIComponent(id)}\`);
             showToast("Device license revoked");
             fetchDevices();
         } catch (e) {
@@ -408,7 +301,7 @@ export default function handler(req, res) {
     async function deleteDevice(id) {
         if (!confirm("Remove this device from the registry?")) return;
         try {
-            await fetch(\`/api/admin?action=delete&device_id=\${encodeURIComponent(id)}\`);
+            await fetch(\`/api/verify?action=delete&device_id=\${encodeURIComponent(id)}\`);
             showToast("Device deleted");
             fetchDevices();
         } catch (e) {
