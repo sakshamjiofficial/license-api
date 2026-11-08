@@ -32,13 +32,23 @@ export default function handler(req, res) {
     }
 
     const cleanDeviceId = device_id.trim();
-
-    // Grant 24 Hours access (or calculate midnight timestamp)
     const durationMs = 24 * 60 * 60 * 1000;
-    const expiresAt = Date.now() + durationMs;
+    const now = Date.now();
+    const expiresAt = now + durationMs;
 
-    // Record device in the active registry
-    global.activatedDevices[cleanDeviceId] = expiresAt;
+    // Save or update device record
+    let record = global.activatedDevices[cleanDeviceId];
+    if (typeof record === 'object' && record !== null) {
+        record.expiresAt = expiresAt;
+        record.lastSeen = now;
+    } else {
+        global.activatedDevices[cleanDeviceId] = {
+            expiresAt: expiresAt,
+            pkg: 'unknown',
+            firstSeen: now,
+            lastSeen: now
+        };
+    }
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
