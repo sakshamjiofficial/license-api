@@ -235,11 +235,24 @@ export default async function handler(req, res) {
 <script>
     let allDevices = [];
 
-    // Directly query /api/verify?action=list where live device state resides
     async function fetchDevices() {
         try {
             const res = await fetch('/api/verify?action=list');
             const data = await res.json();
+            
+            // Check if verify.js returned proper stats
+            if (!data || !data.stats) {
+                const msg = data && data.message ? data.message : "Incompatible response";
+                showToast("Note: Please update api/verify.js on Vercel (" + msg + ")");
+                document.getElementById('device-table').innerHTML = 
+                    '<tr><td colspan="7" class="empty-state" style="padding: 30px; line-height: 1.8;">' +
+                    '<div style="font-size: 16px; font-weight: 700; color: #dc2626; margin-bottom: 8px;">⚠️ api/verify.js on Vercel is still running the old version</div>' +
+                    '<div style="color: #4b5563; font-size: 14px;">The dashboard reached <code>/api/verify?action=list</code>, but your deployed <code>api/verify.js</code> returned: <em>\"' + escapeHtml(msg) + '\"</em>.<br>' +
+                    'Please copy the updated <code>api/verify.js</code> code into your Vercel project to enable live device listing.</div>' +
+                    '</td></tr>';
+                return;
+            }
+
             allDevices = data.devices || [];
             
             document.getElementById('stat-total').innerText = data.stats.total;
