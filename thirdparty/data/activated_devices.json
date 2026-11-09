@@ -1,0 +1,12 @@
+{
+    "9774d56d682e549c": {
+        "deviceId": "9774d56d682e549c",
+        "channel": "ravan",
+        "pkg": "comviademo",
+        "activatedAt": 1794258541518,
+        "expiresAt": 1794335400000,
+        "active": true,
+        "ip": "127.0.0.1",
+        "userAgent": "Unknown"
+    }
+}
