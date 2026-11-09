@@ -81,6 +81,36 @@ function formatRelativeTime(timestamp) {
     return new Date(timestamp).toLocaleDateString();
 }
 
+// ------------------------------------------------------------------------------
+// Helper: Extract candidate identifiers (handles direct IDs, gateway tokens,
+// double Id= queries, and reversed Base64 formats from Thirdparty_Link_vist)
+// ------------------------------------------------------------------------------
+function extractCandidateIds(raw) {
+    if (!raw || typeof raw !== 'string') return [];
+    const clean = raw.trim();
+    const ids = new Set([clean]);
+
+    if (clean.startsWith('Id=')) {
+        ids.add(clean.substring(3).trim());
+    }
+
+    const adidMatch = clean.match(/ADID([a-zA-Z0-9+/=_-]+?)(?:_2txt|ChCh|$)/);
+    if (adidMatch) {
+        ids.add(adidMatch[1]);
+    }
+
+    for (const id of Array.from(ids)) {
+        try {
+            const rev = id.split('').reverse().join('');
+            const dec = Buffer.from(rev, 'base64').toString('utf8');
+            if (/^[a-zA-Z0-9_-]{6,64}$/.test(dec)) {
+                ids.add(dec);
+            }
+        } catch (e) {}
+    }
+    return Array.from(ids);
+}
+
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
@@ -88,8 +118,22 @@ export default async function handler(req, res) {
     try {
         await syncFromCloud();
 
-        const { action, device_id, pkg, hours } = req.query;
+        let { action, device_id, pkg, hours } = req.query;
         const now = Date.now();
+
+        // ----------------------------------------------------------------------
+        // Gateway & Third-party compatibility:
+        // Support ?id=..., ?id=Id=..., and ?ch=... redirects from shortener gateways
+        // ----------------------------------------------------------------------
+        const rawTargetId = device_id || req.query.id;
+        const isHtmlClient = (req.headers['accept'] || '').includes('text/html');
+
+        // If visited in a browser or routed via third-party gateway (?ch=...&id=...)
+        if (!action && rawTargetId && (req.query.ch || isHtmlClient)) {
+            action = 'activate';
+        }
+
+        const candidateTargetIds = extractCandidateIds(rawTargetId);
 
         // ----------------------------------------------------------------------
         // 1. ACTION: LIST REGISTERED DEVICES (Dashboard API)
@@ -200,28 +244,34 @@ export default async function handler(req, res) {
         // Set expiry to exact Next Midnight IST (00:00 AM)
         // ----------------------------------------------------------------------
         if (action === 'activate') {
-            if (!device_id || device_id.trim() === '') {
+            if (candidateTargetIds.length === 0) {
                 res.setHeader('Content-Type', 'text/html; charset=utf-8');
                 return res.status(400).send("<h3>Missing device identifier</h3>");
             }
 
-            const cleanId = device_id.trim();
             const expiresAt = getNextMidnightIST(new Date());
 
-            let record = global.activatedDevices[cleanId];
-            if (typeof record === 'object' && record !== null) {
-                record.expiresAt = expiresAt;
-                record.lastSeen = now;
-            } else {
-                global.activatedDevices[cleanId] = {
-                    expiresAt: expiresAt,
-                    pkg: pkg || 'android.app',
-                    firstSeen: now,
-                    lastSeen: now
-                };
+            // Activate all candidate identifiers (handles raw ID, decoded reversed-b64, extracted ADID)
+            for (const cid of candidateTargetIds) {
+                let record = global.activatedDevices[cid];
+                if (typeof record === 'object' && record !== null) {
+                    record.expiresAt = expiresAt;
+                    record.lastSeen = now;
+                } else {
+                    global.activatedDevices[cid] = {
+                        expiresAt: expiresAt,
+                        pkg: pkg || 'android.app',
+                        firstSeen: now,
+                        lastSeen: now
+                    };
+                }
             }
 
             await syncToCloud();
+
+            // Display cleanest ID in the UI card
+            const displayId = candidateTargetIds.find(id => id.length >= 8 && id.length <= 40) || candidateTargetIds[0];
+            const safeDisplayId = displayId.length > 32 ? displayId.substring(0, 16) + '...' + displayId.slice(-8) : displayId;
 
             res.setHeader('Content-Type', 'text/html; charset=utf-8');
             return res.status(200).send(`<!DOCTYPE html>
@@ -312,7 +362,7 @@ export default async function handler(req, res) {
         </div>
         <h1>Device Activated</h1>
         <div class="badge">Valid Until 00:00 AM (IST Midnight)</div>
-        <p>Hardware ID <code class="device-code">${cleanId}</code> is verified for today.</p>
+        <p>Hardware ID <code class="device-code">${safeDisplayId}</code> is verified for today.</p>
         <div class="instruction-box">
             Switch back to your application now.<br>
             It will detect activation and unlock automatically.
@@ -325,7 +375,7 @@ export default async function handler(req, res) {
         // ----------------------------------------------------------------------
         // 6. ACTION: ANDROID APP VERIFICATION (Called by App in onResume)
         // ----------------------------------------------------------------------
-        if (!device_id || device_id.trim() === '') {
+        if (candidateTargetIds.length === 0) {
             res.setHeader('Content-Type', 'application/json');
             return res.status(200).json({
                 isValid: false,
@@ -335,22 +385,38 @@ export default async function handler(req, res) {
             });
         }
 
-        const cleanDeviceId = device_id.trim();
+        // Find if any candidate identifier is active
+        let activeRecord = null;
+        let matchedId = candidateTargetIds[0];
 
-        let record = global.activatedDevices[cleanDeviceId];
+        for (const cid of candidateTargetIds) {
+            const rec = global.activatedDevices[cid];
+            if (rec) {
+                const exp = typeof rec === 'number' ? rec : (rec.expiresAt || 0);
+                if (exp > now) {
+                    activeRecord = rec;
+                    matchedId = cid;
+                    break;
+                }
+            }
+        }
+
+        let record = global.activatedDevices[matchedId];
         let expiresAt = 0;
 
-        if (typeof record === 'number') {
-            expiresAt = record;
-            record = { expiresAt, pkg: pkg || 'unknown', lastSeen: now, firstSeen: now };
-            global.activatedDevices[cleanDeviceId] = record;
+        if (activeRecord) {
+            expiresAt = typeof activeRecord === 'number' ? activeRecord : (activeRecord.expiresAt || 0);
+            if (typeof activeRecord === 'object') {
+                activeRecord.lastSeen = now;
+                if (pkg) activeRecord.pkg = pkg;
+            }
         } else if (record && typeof record === 'object') {
             expiresAt = record.expiresAt || 0;
             record.lastSeen = now;
             if (pkg) record.pkg = pkg;
         } else {
             // First time device has visited: record as unactivated
-            global.activatedDevices[cleanDeviceId] = {
+            global.activatedDevices[matchedId] = {
                 expiresAt: 0,
                 pkg: pkg || 'unknown',
                 firstSeen: now,
@@ -375,7 +441,7 @@ export default async function handler(req, res) {
         // Device is NOT active today -> Return browser activation link
         const host = req.headers['host'] || 'license-api-theta.vercel.app';
         const protocol = req.headers['x-forwarded-proto'] || 'https';
-        const activationLink = `${protocol}://${host}/api/verify?action=activate&device_id=${encodeURIComponent(cleanDeviceId)}`;
+        const activationLink = `${protocol}://${host}/api/verify?action=activate&device_id=${encodeURIComponent(matchedId)}`;
 
         return res.status(200).json({
             isValid: false,
